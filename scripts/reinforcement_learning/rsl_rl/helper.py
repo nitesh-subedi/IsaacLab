@@ -218,3 +218,26 @@ class VectorizedEpisodeBuffer:
             # reset buffer for next episode
             self.buffers[i] = []
             self.episode_ids[i] += 1
+
+# self.goal_poses = torch.tensor([
+#                                 [6.07, 3.34],   #Door
+#                                 [(5.93, 0.1), (5.93, -1.92)],  #Working table
+#                                 [0.63, -3.7],   #TV
+#                                 [5.28, -0.56],  #Working chair black
+#                                 [5.28, -1.44],  #Working chair orange
+#                                 [4.4, 3.34],     #Mirror
+#                                 [-3.98, -3.56],  #Front Trash can below fire extinguisher
+#                                 [6.25, 1.48],   #Plant near door
+#                                 [-2.74, 2.9],   #Plant near sofa
+#                                 [6.00, -2.53],  #Floor Lamp
+#                                 [(4.715, -3.16), (4.27, -3.2), (5.05, -3.2)], #Printer_table
+#                                 [5.12, -3.15],  #Monitor near printer
+#                                 [(3.08, 2.65), (2.27, 2.65), (1.34, 2.65)],    # 13: Wardrobe (Wall Cabinet)
+#                                 [-4.01, 0.83],   # 14: Small Plant Right
+#                                 [-4.01, -1.35],   # 15: Small Plant Left
+#                                 [-0.14, 1.36],      # Green Cup
+#                                 [-0.6, 1.369],  # Red Cup
+#                                 [0.15, 2.05], # Green Pouf
+#                                 [-1.45, 2.05], # Red Pouf
+#                                 ], device=self.device, dtype=torch.float32
+#                                 ) 
