@@ -71,3 +71,5 @@ tests/
 .isaac-lab-docker-history
 nav_runs
 textures
+embeddings
+offline_rl_models

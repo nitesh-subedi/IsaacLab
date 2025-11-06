@@ -179,7 +179,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     timestep = 0
     # simulate environment
     from helper import SimpleStepDumper, VectorizedEpisodeBuffer
-    dumper = SimpleStepDumper(out_dir="nav_runs/rollout_randomised", prefix="step")
+    dumper = SimpleStepDumper(out_dir="nav_runs/rollout_good_lighting", prefix="step")
     buffer_num_envs = args_cli.num_envs if args_cli.num_envs is not None else getattr(env, "num_envs", None)
     ep_buffer = VectorizedEpisodeBuffer(dumper, num_envs=buffer_num_envs, success_key="success", max_len=2000)
 
@@ -196,8 +196,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         ep_buffer.flush_done(dones)
         timestep += 1
 
-        if ep_buffer.global_step >= 300_000:
-            print("[INFO] Reached maximum timesteps (300000); stopping play loop.")
+        if ep_buffer.global_step >= 20_000:
+            print("[INFO] Reached maximum timesteps (20000); stopping play loop.")
             break
 
         if args_cli.video:
