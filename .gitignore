@@ -73,3 +73,9 @@ nav_runs
 textures
 embeddings
 offline_rl_models
+visreg_models
+exported
+*.pt
+*.d3
+*.json
+*.ipynb

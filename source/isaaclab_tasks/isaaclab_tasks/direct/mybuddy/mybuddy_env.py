@@ -43,6 +43,8 @@ from pxr import Usd, UsdShade, Sdf
 
 import omni.usd
 
+from isaaclab.assets import DeformableObject, DeformableObjectCfg
+
 
 MASK_SIZE = 30
 

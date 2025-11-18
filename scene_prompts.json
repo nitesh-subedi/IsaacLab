@@ -45,7 +45,7 @@
       "negation": "Navigate to the chair that is not orange.",
       "positive_baseline_ref2": "Navigate to the black chair left of the orange chair.",
       "positive_color_only_ref2": "Navigate to the black object left of the orange chair.",
-      "positive_baseline_combined": "Navigate to the black chair in in front of the light gray desk and left of the orange chair."
+      "positive_baseline_combined": "Navigate to the black chair in front of the light gray desk and left of the orange chair."
     }
   ],
   "SM_Chair_Orange": [
@@ -63,14 +63,14 @@
   ],
   "SM_Mirror": [
     {
-      "no_relation_baseline": "Navigate to the silver mirror.",
+      "no_relation_baseline": "Navigate to the mirror.",
       "no_relation_color_only": "Navigate to the silver object.",
       "no_relation_baseline_no_color": "Navigate to the mirror.",
-      "positive_baseline_ref1": "Navigate to the silver mirror left of the dark door.",
+      "positive_baseline_ref1": "Navigate to the mirror left of the dark door.",
       "positive_color_only_ref1": "Navigate to the silver object left of the dark door.",
-      "positive_baseline_ref2": "Navigate to the silver mirror right of the dark wood wardrobe.",
+      "positive_baseline_ref2": "Navigate to the mirror right of the dark wood wardrobe.",
       "positive_color_only_ref2": "Navigate to the silver object right of the wardrobe.",
-      "positive_baseline_combined": "Navigate to the silver mirror left of the dark door and right of the dark wood wardrobe."
+      "positive_baseline_combined": "Navigate to the mirror left of the dark door and right of the dark wood wardrobe."
     }
   ],
   "SM_TrashCan": [
