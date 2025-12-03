@@ -179,9 +179,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     timestep = 0
     # simulate environment
     # from helper import SimpleStepDumper, VectorizedEpisodeBuffer
-    # dumper = SimpleStepDumper(out_dir="nav_runs/rollout_good_lighting", prefix="step")
+    # dumper = SimpleStepDumper(out_dir="eval_runs/vilt_eval_rollouts_no_relation_baseline", prefix="step")
     # buffer_num_envs = args_cli.num_envs if args_cli.num_envs is not None else getattr(env, "num_envs", None)
-    # ep_buffer = VectorizedEpisodeBuffer(dumper, num_envs=buffer_num_envs, success_key="success", max_len=2000)
+    # ep_buffer = VectorizedEpisodeBuffer(dumper, num_envs=buffer_num_envs, success_key="done", max_len=2000)
 
     while simulation_app.is_running():
         start_time = time.time()

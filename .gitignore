@@ -79,3 +79,4 @@ exported
 *.d3
 *.json
 *.ipynb
+eval_runs/
