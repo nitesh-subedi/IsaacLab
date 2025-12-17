@@ -179,9 +179,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     timestep = 0
     # simulate environment
     # from helper import SimpleStepDumper, VectorizedEpisodeBuffer
-    # dumper = SimpleStepDumper(out_dir="eval_runs/noisy_policy_std_1.0", prefix="step")
+    # dumper = SimpleStepDumper(out_dir="nav_runs/multiple_cameras", prefix="step")
     # buffer_num_envs = args_cli.num_envs if args_cli.num_envs is not None else getattr(env, "num_envs", None)
-    # ep_buffer = VectorizedEpisodeBuffer(dumper, num_envs=buffer_num_envs, success_key="done", max_len=2000)
+    # ep_buffer = VectorizedEpisodeBuffer(dumper, num_envs=buffer_num_envs, success_key="success", max_len=2000)
 
     while simulation_app.is_running():
         start_time = time.time()
@@ -196,8 +196,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         # ep_buffer.flush_done(dones)
         # timestep += 1
 
-        # if ep_buffer.global_step >= 100_000:
-        #     print("[INFO] Reached maximum timesteps (100000); stopping play loop.")
+        # # if ep_buffer.global_step >= 30_000:
+        # #     print("[INFO] Reached maximum timesteps (100000); stopping play loop.")
+        # #     break
+
+        # if ep_buffer.episode_ids[0] == 100:
+        #     print("[INFO] Reached 100 episodes; stopping play loop.")
         #     break
 
         if args_cli.video:

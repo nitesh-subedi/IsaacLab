@@ -222,7 +222,7 @@ def main():
     all_metrics = {}
 
     for rollout_dir in rollout_dirs:
-        if not rollout_dir.startswith('eval_runs/noisy'):
+        if not rollout_dir.startswith('eval_runs/siglip2'):
             continue
         print(f"\nProcessing rollouts in: {rollout_dir}")
         # Load rollouts
