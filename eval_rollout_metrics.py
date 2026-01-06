@@ -192,7 +192,7 @@ def print_metrics(name: str, metrics: Dict):
 
 def main():
     # Configuration: Set max episodes per scenario for fair comparison
-    MAX_EPISODES = 50# Change this value to compare different numbers of episodes
+    MAX_EPISODES = 1000# Change this value to compare different numbers of episodes
 
     # Auto-detect all rollout directories in ./eval_runs/
     eval_runs_path = Path("./eval_runs")
@@ -222,7 +222,7 @@ def main():
     all_metrics = {}
 
     for rollout_dir in rollout_dirs:
-        if not rollout_dir.startswith('eval_runs/siglip2'):
+        if not rollout_dir.startswith('eval_runs/barlow_twins_100eps'):
             continue
         print(f"\nProcessing rollouts in: {rollout_dir}")
         # Load rollouts
