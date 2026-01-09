@@ -178,10 +178,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     obs = env.get_observations()
     timestep = 0
     # simulate environment
-    # from helper import SimpleStepDumper, VectorizedEpisodeBuffer
-    # dumper = SimpleStepDumper(out_dir="nav_runs/randomised_color", prefix="step")
-    # buffer_num_envs = args_cli.num_envs if args_cli.num_envs is not None else getattr(env, "num_envs", None)
-    # ep_buffer = VectorizedEpisodeBuffer(dumper, num_envs=buffer_num_envs, success_key="success", max_len=2000)
+    from helper import SimpleStepDumper, VectorizedEpisodeBuffer
+    dumper = SimpleStepDumper(out_dir="eval_runs/text2nav_baseline_no_relation_no_color_top100k", prefix="step")
+    buffer_num_envs = args_cli.num_envs if args_cli.num_envs is not None else getattr(env, "num_envs", None)
+    ep_buffer = VectorizedEpisodeBuffer(dumper, num_envs=buffer_num_envs, success_key="done", max_len=2000)
 
     while simulation_app.is_running():
         start_time = time.time()
@@ -192,13 +192,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # env stepping
             obs, rewards, dones, info = env.step(actions)
 
-        # ep_buffer.add(obs, actions, rewards, dones, info)
-        # ep_buffer.flush_done(dones)
-        # timestep += 1
+        ep_buffer.add(obs, actions, rewards, dones, info)
+        ep_buffer.flush_done(dones)
+        timestep += 1
 
-        # if ep_buffer.episode_ids[0] == 250:
-        #     print("[INFO] Reached 250 episodes; stopping play loop.")
-        #     break
+        if ep_buffer.episode_ids[0] == 500:
+            print("[INFO] Reached 500 episodes; stopping play loop.")
+            break
 
         if args_cli.video:
             timestep += 1
