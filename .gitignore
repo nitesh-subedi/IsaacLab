@@ -80,3 +80,4 @@ exported
 *.json
 *.ipynb
 eval_runs/
+*.pth

@@ -222,7 +222,7 @@ def main():
     all_metrics = {}
 
     for rollout_dir in rollout_dirs:
-        if not rollout_dir.startswith('eval_runs/text2nav_baseline_no_relation_no_color_top'):
+        if not rollout_dir.startswith('eval_runs/text2nav_baseline_no_relation_no_color_vanilla'):
             continue
         print(f"\nProcessing rollouts in: {rollout_dir}")
         # Load rollouts

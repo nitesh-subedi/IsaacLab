@@ -179,7 +179,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     timestep = 0
     # simulate environment
     from helper import SimpleStepDumper, VectorizedEpisodeBuffer
-    dumper = SimpleStepDumper(out_dir="eval_runs/text2nav_baseline_no_relation_no_color_top100k", prefix="step")
+    dumper = SimpleStepDumper(out_dir="eval_runs/text2nav_baseline_no_relation_no_color_vanilla", prefix="step")
     buffer_num_envs = args_cli.num_envs if args_cli.num_envs is not None else getattr(env, "num_envs", None)
     ep_buffer = VectorizedEpisodeBuffer(dumper, num_envs=buffer_num_envs, success_key="done", max_len=2000)
 
