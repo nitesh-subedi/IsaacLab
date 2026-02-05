@@ -19,7 +19,6 @@ parser.add_argument(
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--checkpoint", type=str, default=None, help="Path to checkpoint.")
-parser.add_argument("--top_k", type=int, default=None, help="Top k patches.")
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
@@ -47,7 +46,7 @@ def main():
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
     # env_cfg.adapter_path = args_cli.checkpoint
-    # env_cfg.rollout_dir = f"/home/nitesh/IsaacSim5/IsaacLab/rollouts/text2nav_eval_topk_{args_cli.top_k}" 
+    # env_cfg.rollout_dir = f"/home/nitesh/IsaacSim5/IsaacLab/rollouts/text2nav_eval_lclaa" 
 
     # create environment
     env = gym.make(args_cli.task, cfg=env_cfg)

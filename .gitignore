@@ -81,3 +81,10 @@ exported
 *.ipynb
 eval_runs/
 *.pth
+navigation_videos
+navigation_videos*
+episode_images*
+*.mp4
+*.png
+*.jpg
+custom*
