@@ -79,6 +79,30 @@
     "[restructuredtext]": {
         "editor.tabSize": 2
     },
+    // Force full workspace analysis/indexing for large multi-package repos.
+    "python.analysis.diagnosticMode": "workspace",
+    "python.analysis.indexing": true,
+    "python.analysis.userFileIndexingLimit": -1,
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.useLibraryCodeForTypes": true,
+    "python.analysis.include": [
+        "${workspaceFolder}/source",
+        "${workspaceFolder}/scripts"
+    ],
+    "python.analysis.exclude": [
+        "${workspaceFolder}/_isaac_sim",
+        "${workspaceFolder}/logs",
+        "${workspaceFolder}/outputs",
+        "${workspaceFolder}/docs/_build"
+    ],
+    "python.analysis.packageIndexDepths": [
+        { "name": "isaaclab", "depth": 4, "includeAllSymbols": true },
+        { "name": "isaaclab_tasks", "depth": 4, "includeAllSymbols": true },
+        { "name": "isaaclab_assets", "depth": 3, "includeAllSymbols": true },
+        { "name": "isaaclab_rl", "depth": 3, "includeAllSymbols": true },
+        { "name": "isaaclab_mimic", "depth": 3, "includeAllSymbols": true },
+        { "name": "isaaclab_contrib", "depth": 3, "includeAllSymbols": true }
+    ],
     // Python extra paths
     // Note: this is filled up when "./isaaclab.sh -i" is run
     "python.analysis.extraPaths": []

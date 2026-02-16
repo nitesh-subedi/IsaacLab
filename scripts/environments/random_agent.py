@@ -54,16 +54,24 @@ def main():
     # print info (this is vectorized environment)
     print(f"[INFO]: Gym observation space: {env.observation_space}")
     print(f"[INFO]: Gym action space: {env.action_space}")
+    
+    # Access the unwrapped environment to get num_envs and device
+    unwrapped_env = env.unwrapped
+    
     # reset environment
     env.reset()
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
-            # sample actions from -1 to 1
-            actions = 2 * torch.rand(env.action_space.shape, device=env.unwrapped.device) - 1
+            # sample random actions from -1 to 1
+            # left_arm and right_arm each have 7 DOFs
+            left_arm = torch.rand(unwrapped_env.num_envs, 7, device=unwrapped_env.device) * 2 - 1  # scale to [-1, 1]
+            right_arm = torch.rand(unwrapped_env.num_envs, 7, device=unwrapped_env.device) * 2 - 1  # scale to [-1, 1]
+            actions = {"left_arm": left_arm, "right_arm": right_arm}
             # apply actions
             env.step(actions)
+            pass
 
     # close the simulator
     env.close()

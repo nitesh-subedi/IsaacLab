@@ -45,6 +45,13 @@ class MjcfConverter(AssetConverterBase):
         Args:
             cfg: The configuration instance for URDF to USD conversion.
         """
+        # Ensure the MJCF importer extension is enabled
+        import omni.kit.app
+        
+        manager = omni.kit.app.get_app().get_extension_manager()
+        if not manager.is_extension_enabled("isaacsim.asset.importer.mjcf"):
+            manager.set_extension_enabled_immediate("isaacsim.asset.importer.mjcf", True)
+        
         super().__init__(cfg=cfg)
 
     """

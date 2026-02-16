@@ -137,7 +137,7 @@ agent:
     experiment_name: ""
     write_interval: 100
     checkpoint_interval: 5000
-    wandb: True
+    wandb: False
     wandb_kwargs:
       project: "IsaacLab_Implementation"
       name: "mybuddy_direct_cluttered_background"

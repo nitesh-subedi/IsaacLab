@@ -404,6 +404,9 @@ class DeformableObject(AssetBase):
                 self.target_visualizer.set_visibility(False)
 
     def _debug_vis_callback(self, event):
+        # skip visualization if data is not initialized yet
+        if not self.is_initialized:
+            return
         # check where to visualize
         targets_enabled = self.data.nodal_kinematic_target[:, :, 3] == 0.0
         num_enabled = int(torch.sum(targets_enabled).item())

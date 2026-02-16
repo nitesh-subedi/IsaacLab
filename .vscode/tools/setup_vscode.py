@@ -47,6 +47,39 @@ ISAACSIM_DIR = isaacsim_dir
 """Path to the isaac-sim directory."""
 
 
+def discover_isaacsim_extra_paths() -> list[str]:
+    """Discover extra Python roots from pip-installed Isaac Sim layout.
+
+    In pip installs, Isaac Sim often doesn't ship ``.vscode/settings.json``.
+    We scan common extension roots and collect parent directories that expose
+    top-level namespaces used by Isaac Lab (for example ``omni`` and ``pxr``).
+    """
+    roots_to_scan = [
+        pathlib.Path(ISAACSIM_DIR) / "exts",
+        pathlib.Path(ISAACSIM_DIR) / "extsDeprecated",
+        pathlib.Path(ISAACSIM_DIR) / "extscache",
+        pathlib.Path(ISAACSIM_DIR) / "kit" / "extscore",
+        pathlib.Path(ISAACSIM_DIR) / "kit" / "kernel" / "py",
+    ]
+    package_roots = {"omni", "pxr", "carb", "usdrt", "isaacsim"}
+    extra_paths: set[str] = set()
+
+    for root in roots_to_scan:
+        if not root.exists():
+            continue
+        for pkg_name in package_roots:
+            for pkg_dir in root.rglob(pkg_name):
+                if not pkg_dir.is_dir():
+                    continue
+                # We add the parent directory so `import <pkg_name>` resolves.
+                extra_paths.add(str(pkg_dir.parent))
+
+    # Also include the Isaac Sim package root itself for direct imports.
+    extra_paths.add(ISAACSIM_DIR)
+    # Stable order for deterministic settings.json output.
+    return sorted(extra_paths)
+
+
 def overwrite_python_analysis_extra_paths(isaaclab_settings: str) -> str:
     """Overwrite the python.analysis.extraPaths in the Isaac Lab settings file.
 
@@ -88,18 +121,32 @@ def overwrite_python_analysis_extra_paths(isaaclab_settings: str) -> str:
         rel_path = os.path.relpath(ISAACSIM_DIR, ISAACLAB_DIR)
         path_names = ['"${workspaceFolder}/' + rel_path + "/" + path_name + '"' for path_name in path_names]
     else:
-        path_names = []
-        print(
-            f"[WARN] Could not find Isaac Sim VSCode settings: {isaacsim_vscode_filename}."
-            "\n\tThis will result in missing 'python.analysis.extraPaths' in the VSCode"
-            "\n\tsettings, which limits the functionality of the Python language server."
-            "\n\tHowever, it does not affect the functionality of the Isaac Lab project."
-            "\n\tWe are working on a fix for this issue with the Isaac Sim team."
-        )
+        # Fallback for pip-based Isaac Sim installs that don't ship VSCode settings.
+        discovered_paths = discover_isaacsim_extra_paths()
+        if discovered_paths:
+            rel_path = os.path.relpath(ISAACSIM_DIR, ISAACLAB_DIR)
+            path_names = []
+            for discovered_path in discovered_paths:
+                relative_to_isaacsim = os.path.relpath(discovered_path, ISAACSIM_DIR)
+                path_names.append('"${workspaceFolder}/' + rel_path + "/" + relative_to_isaacsim + '"')
+            print(
+                f"[INFO] Isaac Sim VSCode settings were not found. "
+                f"Discovered {len(path_names)} fallback paths for python.analysis.extraPaths."
+            )
+        else:
+            path_names = []
+            print(
+                f"[WARN] Could not find Isaac Sim VSCode settings: {isaacsim_vscode_filename}."
+                "\n\tThis will result in missing 'python.analysis.extraPaths' in the VSCode"
+                "\n\tsettings, which limits the functionality of the Python language server."
+                "\n\tHowever, it does not affect the functionality of the Isaac Lab project."
+                "\n\tWe are working on a fix for this issue with the Isaac Sim team."
+            )
 
-    # add the path names that are in the Isaac Lab extensions directory
+    # Add Isaac Lab extension paths first so local source has precedence in analysis.
     isaaclab_extensions = os.listdir(os.path.join(ISAACLAB_DIR, "source"))
-    path_names.extend(['"${workspaceFolder}/source/' + ext + '"' for ext in isaaclab_extensions])
+    isaaclab_paths = ['"${workspaceFolder}/source/' + ext + '"' for ext in isaaclab_extensions]
+    path_names = isaaclab_paths + path_names
 
     # combine them into a single string
     path_names = ",\n\t\t".expandtabs(4).join(path_names)

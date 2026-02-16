@@ -77,3 +77,6 @@ tests/
 custom_*
 models_all
 rollout*
+meshes
+*.xml
+isaaclab*

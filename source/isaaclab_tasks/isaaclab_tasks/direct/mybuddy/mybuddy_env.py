@@ -64,13 +64,13 @@ class MyBuddyEnvCfg(DirectRLEnvCfg):
                        gpu_found_lost_pairs_capacity=2**27,
                     #    gpu_found_lost_aggregate_pairs_capacity=2**30,
                        ),
-        gravity=(0.0, 0.0, 9.81),
+        gravity=(0.0, 0.0, -9.81),
     )
     # robot
     robot_cfg = ArticulationCfg(
         prim_path="/World/envs/env_.*/mybuddy",
         spawn=sim_utils.UsdFileCfg(
-            usd_path="mybuddy_rotate.usd",
+            usd_path="/home/nitesh/IsaacSim5/IsaacLab/custom_data/scenes/mybuddy_rotate.usd",
             activate_contact_sensors=True,
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 disable_gravity=True,
@@ -307,24 +307,14 @@ class MyBuddyEnv(DirectRLEnv):
 
         euler = torch.tensor([0.0, 0.0, 90.0], device=self.device)
         quat = quat_from_euler_xyz(*euler).cpu().numpy()
-        plant_cfg = sim_utils.UsdFileCfg(usd_path="plant_v21.usd", scale=(0.05, 0.05, 0.05))
+        plant_cfg = sim_utils.UsdFileCfg(usd_path="/home/nitesh/IsaacSim5/IsaacLab/custom_data/scenes/plant_v21.usd", scale=(0.05, 0.05, 0.05))
         plant_cfg.func(
             "/World/envs/env_.*/Plant1",
             plant_cfg,
             translation=(0.06, -0.25, 0.0),
             orientation=(quat[0], quat[1], quat[2], quat[3]),
         )
-
-        # euler = torch.tensor([0.0, 0.0, 90.0], device=self.device)
-        # quat = quat_from_euler_xyz(*euler).cpu().numpy()
-        # plant_cfg = sim_utils.UsdFileCfg(usd_path="plant_v21.usd", scale=(0.05, 0.05, 0.05))
-        # plant_cfg.func(
-        #     "/World/envs/env_.*/Plant2",
-        #     plant_cfg,
-        #     translation=(-0.07, -0.25, 0.0),
-        #     orientation=(quat[0], quat[1], quat[2], quat[3]),
-        # )
-
+        
         # add light
         light_cfg = sim_utils.SphereLightCfg(intensity=3000.0, color=(1.0, 1.0, 1.0), radius=1.0)
         light_cfg.func("/World/envs/env_.*/Light", light_cfg, translation=(0.0, -0.4, 2.0))
@@ -422,8 +412,7 @@ class MyBuddyEnv(DirectRLEnv):
         stalk_attachment.GetActor1Rel().SetTargets(["/World/ground/GroundPlane/CollisionPlane"])
         auto_attachment_api = PhysxSchema.PhysxAutoAttachmentAPI.Apply(stalk_attachment.GetPrim())
         # Set attributes to reduce initial movement and gap
-        auto_attachment_api.GetPrim().GetAttribute("physxAutoAttachment:deformableVertexOverlapOffset").Set(0.005)
-        # auto_attachment_api.GetPrim().GetAttribute('physxAutoAttachment:rigidSurfaceSamplingDistance').Set(0.01)
+        auto_attachment_api.GetPrim().GetAttribute("physxAutoAttachment:deformableVertexOverlapOffset").Set(0.05)
         auto_attachment_api.GetPrim().GetAttribute("physxAutoAttachment:enableDeformableVertexAttachments").Set(True)
         auto_attachment_api.GetPrim().GetAttribute("physxAutoAttachment:enableRigidSurfaceAttachments").Set(True)
         auto_attachment_api.GetPrim().GetAttribute("physxAutoAttachment:enableCollisionFiltering").Set(True)
@@ -436,28 +425,32 @@ class MyBuddyEnv(DirectRLEnv):
             stalk_attachment.GetActor0Rel().SetTargets([value.GetPath()])
             stalk_attachment.GetActor1Rel().SetTargets([f"{prim_name}/stalk/plant_023"])
             auto_attachment_api = PhysxSchema.PhysxAutoAttachmentAPI.Apply(stalk_attachment.GetPrim())
+            auto_attachment_api.GetPrim().GetAttribute("physxAutoAttachment:deformableVertexOverlapOffset").Set(0.005)
+
 
     def make_deformable(self, prim_dict, simulation_resolution=10):
         key, value = list(prim_dict.items())[0]
+        solver_position_iteration_count = 128
 
         # Create the material
         deformableUtils.add_deformable_body_material(
             self.stage,
             self.deformable_material_path,
-            youngs_modulus=7.5e15,
-            poissons_ratio=0.1,
+            youngs_modulus=7.5e25,
+            poissons_ratio=0.49,
             damping_scale=1.0,
             dynamic_friction=0.5,
-            density=10,
+            density=2.0,
         )
         deformableUtils.add_physx_deformable_body(
             self.stage,
             value.GetPath(),
             collision_simplification=True,
             simulation_hexahedral_resolution=simulation_resolution,
+            solver_position_iteration_count=solver_position_iteration_count,
             self_collision=False,
         )
-        # physicsUtils.add_physics_material_to_prim(self.stage, value.GetPrim(), self.deformable_material_path)
+        physicsUtils.add_physics_material_to_prim(self.stage, value.GetPrim(), self.deformable_material_path)
 
         for key, value in list(prim_dict.items())[1:]:
             deformableUtils.add_physx_deformable_body(
@@ -465,8 +458,10 @@ class MyBuddyEnv(DirectRLEnv):
                 value.GetPath(),
                 collision_simplification=True,
                 simulation_hexahedral_resolution=simulation_resolution,
+                solver_position_iteration_count=solver_position_iteration_count,
                 self_collision=False,
             )
+            physicsUtils.add_physics_material_to_prim(self.stage, value.GetPrim(), self.deformable_material_path)
 
     def _pre_physics_step(self, actions: torch.Tensor) -> None:
         # Clamp and scale actions
