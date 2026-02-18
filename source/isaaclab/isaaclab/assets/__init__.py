@@ -42,6 +42,16 @@ from .articulation import Articulation, ArticulationCfg, ArticulationData
 from .asset_base import AssetBase
 from .asset_base_cfg import AssetBaseCfg
 from .deformable_object import DeformableObject, DeformableObjectCfg, DeformableObjectData
+from .deformable_prim import (
+    DeformablePlantCfg,
+    DeformablePlantMixin,
+    DeformablePrimAsset,
+    DeformablePrimAssetCfg,
+    DeformablePrimAssetData,
+    cook_volume_deformable,
+    make_attachment,
+    make_volume_deformable_material,
+)
 from .rigid_object import RigidObject, RigidObjectCfg, RigidObjectData
 from .rigid_object_collection import RigidObjectCollection, RigidObjectCollectionCfg, RigidObjectCollectionData
 from .surface_gripper import SurfaceGripper, SurfaceGripperCfg

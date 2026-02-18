@@ -26,6 +26,16 @@ gym.register(
 )
 
 gym.register(
+    id="Isaac-MyBuddy-Direct-Maize-v0",
+    entry_point=f"{__name__}.maize_plant_env:MaizePlantEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.maize_plant_env:MaizePlantEnvCfg",
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
+    },
+)
+
+gym.register(
     id="Isaac-MyBuddy-MA-Direct-v0",
     entry_point=f"{__name__}.mybuddy_ma_env:MyBuddyEnv",
     disable_env_checker=True,
