@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  lcla_vlm:
+    build:
+      context: .
+      dockerfile: Dockerfile.noetic_vlm
+    image: ros_noetic:lcla
+    container_name: lcla_vlm
+    network_mode: host
+    ipc: host
+    environment:
+      ROS_MASTER_URI: "http://192.168.0.114:11311"
+      ROS_IP: "192.168.0.112"
+      PYTHONUNBUFFERED: 1
+      # Optional if you ever want GUI inside container:
+      # DISPLAY: "${DISPLAY}"
+    volumes:
+      - /home/nitesh/workspace/robotvlm:/workspace/robotvlm:ro
+      - /home/nitesh/IsaacSim5/IsaacLab:/workspace/IsaacLab:rw
+      - ./scripts:/workspace/scripts:rw
+      # Optional X11:
+      # - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    working_dir: /workspace
+    command: ["bash", "-lc", "source /opt/ros/noetic/setup.bash && python3 /workspace/IsaacLab/vlm_test.py"]
+
+    # GPU access (compose plugin supports this)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # If your compose version doesn’t honor deploy.reservations on non-swarm,
+    # you can add:
+    # runtime: nvidia

@@ -1,0 +1,36 @@
+FROM ros:noetic-ros-core
+
+SHELL ["/bin/bash", "-lc"]
+
+# Fix expired ROS apt key, then install deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl gnupg lsb-release && \
+    rm -rf /var/lib/apt/lists/*
+
+# Re-add ROS repository key (newer method: keyring + signed-by)
+RUN mkdir -p /usr/share/keyrings && \
+    curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc \
+      | gpg --dearmor -o /usr/share/keyrings/ros-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" \
+      > /etc/apt/sources.list.d/ros1-latest.list
+
+# Now install python/pip + your ML deps
+# Use --ignore-installed so pip numpy in /usr/local takes precedence over system numpy,
+# without purging system packages (which would remove python3-rospy).
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends python3 python3-pip && \
+    python3 -m pip install --upgrade pip && \
+    python3 -m pip install --ignore-installed numpy pillow opencv-python torch torchvision transformers && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV ROS_MASTER_URI=http://192.168.0.114:11311
+ENV ROS_IP=192.168.0.112
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip \
+    libgl1 libglib2.0-0 && \
+    python3 -m pip install --upgrade pip && \
+    python3 -m pip install --ignore-installed numpy pillow opencv-python torch torchvision transformers && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip install sentencepiece protobuf tokenizers
