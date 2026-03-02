@@ -61,6 +61,7 @@ def main():
             # apply actions
             env.step(actions)
 
+
     # close the simulator
     env.close()
 

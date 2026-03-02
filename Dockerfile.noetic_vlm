@@ -27,10 +27,11 @@ ENV ROS_MASTER_URI=http://192.168.0.114:11311
 ENV ROS_IP=192.168.0.112
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip \
-    libgl1 libglib2.0-0 && \
+    python3 python3-pip python3-dev build-essential \
+    libgl1 libglib2.0-0 portaudio19-dev alsa-utils libasound2-dev pulseaudio ffmpeg && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --ignore-installed numpy pillow opencv-python torch torchvision transformers && \
+    python3 -m pip install SpeechRecognition pyaudio openai-whisper soundfile requests && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install sentencepiece protobuf tokenizers

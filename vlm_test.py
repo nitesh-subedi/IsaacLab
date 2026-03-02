@@ -8,6 +8,12 @@ import rospy
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Twist
 
+import threading
+import requests
+try:
+    import speech_recognition as sr
+except ImportError:
+    sr = None
 # Import your agent
 # Make sure this path matches your actual project layout.
 # If your class file is at: /workspace/robotvlm/decouple_rl/models/cross_attention_infer.py
@@ -22,7 +28,16 @@ class PolicyNode:
     def __init__(self):
         # Params
         self.topic = rospy.get_param("~topic", "/camera/image/compressed")
-        self.prompt = rospy.get_param("~prompt", "Navigate to the green plant right of the red chair.")  # you can update per goal
+        
+        self.enable_speech = rospy.get_param("~enable_speech", True)
+        if self.enable_speech:
+            self.prompt = None  # Wait for user speech before moving
+        else:
+            self.prompt = rospy.get_param("~prompt", "Navigate to the green plant right of the red chair.")
+            
+        self.manual_override = None
+        self.speed_multiplier = 1.0
+
         self.model_type = rospy.get_param("~model_type", "siglip")
 
         self.adapter_path = rospy.get_param(
@@ -60,6 +75,17 @@ class PolicyNode:
 
         self.cmd_vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
 
+        # Speech control
+        if self.enable_speech:
+            if sr is None:
+                rospy.logwarn("Speech control enabled but speech_recognition not found. Please install: pip install SpeechRecognition pyaudio openai-whisper")
+                self.prompt = rospy.get_param("~prompt", "Navigate to the green plant right of the red chair.") # fallback
+            else:
+                self.ollama_model = rospy.get_param("~ollama_model", "llama3")
+                self.speech_thread = threading.Thread(target=self._speech_loop)
+                self.speech_thread.daemon = True
+                self.speech_thread.start()
+
         # Image saving
         self.save_dir = rospy.get_param("~save_dir", "/workspace/IsaacLab")
         self._latest_path = os.path.join(self.save_dir, "latest_frame.jpg")
@@ -83,6 +109,94 @@ class PolicyNode:
         )
         rospy.loginfo("Subscribed to %s", self.topic)
 
+    def _speech_loop(self):
+        recognizer = sr.Recognizer()
+        recognizer.dynamic_energy_threshold = True
+        
+        while not rospy.is_shutdown():
+            try:
+                with sr.Microphone() as source:
+                    rospy.loginfo_throttle(10.0, "Listening for speech command...")
+                    audio = recognizer.listen(source, timeout=2.0, phrase_time_limit=5.0)
+                
+                rospy.loginfo("Audio captured. Transcribing with local Whisper...")
+                text = recognizer.recognize_whisper(audio, model="base.en")
+                rospy.loginfo(f"Speech transcription: '{text}'")
+                
+                if text.strip():
+                    new_prompt = self._get_ollama_prompt(text)
+                    if new_prompt:
+                        cmd = new_prompt.strip().upper()
+                        if cmd.startswith("NAVIGATE:"):
+                            self.prompt = new_prompt[9:].strip()
+                            self.manual_override = None
+                            rospy.loginfo(f"Updating VLM prompt to: '{self.prompt}'")
+                        elif cmd.startswith("STOP"):
+                            self.manual_override = "STOP"
+                            rospy.loginfo("Commanded to STOP.")
+                        elif cmd.startswith("FORWARD"):
+                            self.manual_override = "FORWARD"
+                            rospy.loginfo("Commanded to MOVE FORWARD.")
+                        elif cmd.startswith("REVERSE") or cmd.startswith("BACKWARD"):
+                            self.manual_override = "REVERSE"
+                            rospy.loginfo("Commanded to REVERSE.")
+                        elif cmd.startswith("TURN: LEFT"):
+                            self.manual_override = "TURN_LEFT"
+                            rospy.loginfo("Commanded to TURN LEFT.")
+                        elif cmd.startswith("TURN: RIGHT"):
+                            self.manual_override = "TURN_RIGHT"
+                            rospy.loginfo("Commanded to TURN RIGHT.")
+                        elif cmd.startswith("FASTER"):
+                            self.speed_multiplier += 0.5
+                            rospy.loginfo(f"Speed increased to x{self.speed_multiplier}")
+                        elif cmd.startswith("SLOWER"):
+                            self.speed_multiplier -= 0.5
+                            self.speed_multiplier = max(0.0, self.speed_multiplier)
+                            rospy.loginfo(f"Speed decreased to x{self.speed_multiplier}")
+                        else:
+                            # Fallback just in case LLM outputs something unexpected
+                            self.prompt = new_prompt
+                            self.manual_override = None
+                            rospy.loginfo(f"Updating VLM prompt to: '{self.prompt}' (Fallback)")
+                        
+            except sr.WaitTimeoutError:
+                pass
+            except Exception as e:
+                rospy.logwarn_throttle(5.0, f"Speech recognition exception: {e}")
+                time.sleep(1.0)
+
+    def _get_ollama_prompt(self, text):
+        url = "http://localhost:11434/api/generate"
+        system_prompt = (
+            "You are a helpful assistant for a mobile robot. "
+            "Convert the user's spoken command into one of the following exact formats. "
+            "Do not output anything else or any conversational filler.\n"
+            "- If it's a target to navigate to: NAVIGATE: [target description]\n"
+            "- If the user says to stop or halt: STOP\n"
+            "- If the user says to move forward or go straight: FORWARD\n"
+            "- If the user says to reverse, go back, or back up: REVERSE\n"
+            "- If the user says to turn left: TURN: LEFT\n"
+            "- If the user says to turn right: TURN: RIGHT\n"
+            "- If the user says to go faster: FASTER\n"
+            "- If the user says to go slower: SLOWER\n"
+            "Only output the command matching the format above."
+        )
+        payload = {
+            "model": self.ollama_model,
+            "prompt": f"User spoken command: {text}",
+            "system": system_prompt,
+            "stream": False
+        }
+        try:
+            res = requests.post(url, json=payload, timeout=10.0)
+            if res.status_code == 200:
+                return res.json().get("response", "").strip()
+            else:
+                rospy.logwarn(f"Ollama API error: {res.status_code} - {res.text}")
+        except Exception as e:
+            rospy.logwarn(f"Failed to query Ollama at {url}: {e}")
+        return None
+
     def cb(self, msg: CompressedImage):
         # Decode JPEG bytes -> BGR image
         np_arr = np.frombuffer(msg.data, np.uint8)
@@ -90,6 +204,13 @@ class PolicyNode:
         if frame_bgr is None:
             rospy.logwarn_throttle(2.0, "Failed to decode compressed image.")
             return
+
+        # Center crop to maximum square resolution
+        h, w = frame_bgr.shape[:2]
+        size = min(h, w)
+        y = (h - size) // 2
+        x = (w - size) // 2
+        frame_bgr = frame_bgr[y:y+size, x:x+size]
 
         # Convert to RGB numpy for your agent (it accepts np.ndarray)
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
@@ -99,25 +220,46 @@ class PolicyNode:
         if not ok:
             rospy.logwarn_throttle(5.0, "cv2.imwrite failed — cannot write to %s", self._latest_path)
 
-        # Save timestamped frame
-        ts_path = os.path.join(self._frames_dir, f"frame_{self._frame_idx:06d}.jpg")
-        cv2.imwrite(ts_path, frame_bgr)
-        self._frame_idx += 1
+        # # Save timestamped frame
+        # ts_path = os.path.join(self._frames_dir, f"frame_{self._frame_idx:06d}.jpg")
+        # cv2.imwrite(ts_path, frame_bgr)
+        # self._frame_idx += 1
 
-        # Run policy
-        t0 = time.time()
-        action = self.policy.predict(frame_rgb, self.prompt)
-        dt = (time.time() - t0) * 1000.0
+        if self.prompt is None and self.manual_override is None:
+            rospy.loginfo_throttle(5.0, "Waiting for initial speech command before moving...")
+            twist = Twist()
+            self.cmd_vel_pub.publish(twist)
+            return
 
-        # action = [omega_left, omega_right]  (rad/s per wheel)
-        omega_l = float(action[0])
-        omega_r = float(action[1])
+        dt = 0.0
+        omega_l = 0.0
+        omega_r = 0.0
 
-        # Differential drive kinematics -> v (m/s), w (rad/s)
-        r = self.wheel_radius
-        L = self.wheel_base
-        v_raw = r * (omega_r + omega_l) / 2.0
-        w_raw = r * (omega_r - omega_l) / L
+        if self.manual_override == "STOP":
+            v_raw, w_raw = 0.0, 0.0
+        elif self.manual_override == "FORWARD":
+            v_raw, w_raw = 0.2, 0.0
+        elif self.manual_override == "REVERSE":
+            v_raw, w_raw = -0.2, 0.0
+        elif self.manual_override == "TURN_LEFT":
+            v_raw, w_raw = self._v_smooth, 0.5
+        elif self.manual_override == "TURN_RIGHT":
+            v_raw, w_raw = self._v_smooth, -0.5
+        else:
+            # Run policy
+            t0 = time.time()
+            action = self.policy.predict(frame_rgb, self.prompt)
+            dt = (time.time() - t0) * 1000.0
+
+            # action = [omega_left, omega_right]  (rad/s per wheel)
+            omega_l = float(action[0])
+            omega_r = float(action[1])
+
+            # Differential drive kinematics -> v (m/s), w (rad/s)
+            r = self.wheel_radius
+            L = self.wheel_base
+            v_raw = r * (omega_r + omega_l) / 2.0
+            w_raw = r * (omega_r - omega_l) / L
 
         # Clamp raw values before smoothing
         v_raw = float(np.clip(v_raw, -self.max_v, self.max_v))
@@ -128,12 +270,12 @@ class PolicyNode:
         self._v_smooth = a * v_raw + (1.0 - a) * self._v_smooth
         self._w_smooth = a * w_raw + (1.0 - a) * self._w_smooth
 
-        v = self._v_smooth
-        w = self._w_smooth
+        v = self._v_smooth * self.speed_multiplier
+        w = self._w_smooth * self.speed_multiplier
 
         twist = Twist()
         twist.linear.x  = v
-        twist.angular.z = -w * 0.2
+        twist.angular.z = w * 0.2
         self.cmd_vel_pub.publish(twist)
 
         self.count += 1
