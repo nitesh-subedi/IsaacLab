@@ -159,3 +159,26 @@ gym.register(
     },
     disable_env_checker=True,
 )
+
+##
+# Hello Robot Stretch3 - IK Relative Pose Control
+##
+
+gym.register(
+    id="Isaac-Stack-Cube-Stretch3-IK-Rel-Mimic-v0",
+    entry_point=f"{__name__}.stretch_stack_ik_rel_mimic_env:StretchCubeStackIKRelMimicEnv",
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.stretch_stack_ik_rel_mimic_env_cfg:StretchCubeStackIKRelMimicEnvCfg",
+    },
+    disable_env_checker=True,
+)
+
+
+gym.register(
+    id="Isaac-Lift-Cube-Stretch3-IK-Rel-Mimic-v0",
+    entry_point=f"{__name__}.stretch_lift_ik_rel_mimic_env:StretchCubeLiftIKRelMimicEnv",
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.stretch_lift_ik_rel_mimic_env_cfg:StretchCubeLiftIKRelMimicEnvCfg",
+    },
+    disable_env_checker=True,
+)

@@ -37,13 +37,15 @@ class Se3Keyboard(DeviceBase):
         ============================== ================= =================
         Description                    Key (+ve axis)    Key (-ve axis)
         ============================== ================= =================
-        Toggle gripper (open/close)    K
+        Toggle gripper (open/close)    M                 
         Move along x-axis              W                 S
         Move along y-axis              A                 D
         Move along z-axis              Q                 E
         Rotate along x-axis            Z                 X
         Rotate along y-axis            T                 G
         Rotate along z-axis            C                 V
+        Drive base forward/backward    I                 K
+        Turn base left/right           J                 L
         ============================== ================= =================
 
     .. seealso::
@@ -62,6 +64,8 @@ class Se3Keyboard(DeviceBase):
         self.pos_sensitivity = cfg.pos_sensitivity
         self.rot_sensitivity = cfg.rot_sensitivity
         self.gripper_term = cfg.gripper_term
+        self.base_term = cfg.base_term
+        self.base_sensitivity = cfg.base_sensitivity
         self._sim_device = cfg.sim_device
         # acquire omniverse interfaces
         self._appwindow = omni.appwindow.get_default_app_window()
@@ -78,6 +82,7 @@ class Se3Keyboard(DeviceBase):
         self._close_gripper = False
         self._delta_pos = np.zeros(3)  # (x, y, z)
         self._delta_rot = np.zeros(3)  # (roll, pitch, yaw)
+        self._base_vel = np.zeros(2)   # base diff drive
         # dictionary for additional callbacks
         self._additional_callbacks = dict()
 
@@ -91,13 +96,16 @@ class Se3Keyboard(DeviceBase):
         msg = f"Keyboard Controller for SE(3): {self.__class__.__name__}\n"
         msg += f"\tKeyboard name: {self._input.get_keyboard_name(self._keyboard)}\n"
         msg += "\t----------------------------------------------\n"
-        msg += "\tToggle gripper (open/close): K\n"
+        msg += "\tToggle gripper (open/close): M\n"
         msg += "\tMove arm along x-axis: W/S\n"
         msg += "\tMove arm along y-axis: A/D\n"
         msg += "\tMove arm along z-axis: Q/E\n"
         msg += "\tRotate arm along x-axis: Z/X\n"
         msg += "\tRotate arm along y-axis: T/G\n"
-        msg += "\tRotate arm along z-axis: C/V"
+        msg += "\tRotate arm along z-axis: C/V\n"
+        if self.base_term:
+            msg += "\tDrive base forward/backward: I/K\n"
+            msg += "\tTurn base left/right: J/L"
         return msg
 
     """
@@ -109,6 +117,7 @@ class Se3Keyboard(DeviceBase):
         self._close_gripper = False
         self._delta_pos = np.zeros(3)  # (x, y, z)
         self._delta_rot = np.zeros(3)  # (roll, pitch, yaw)
+        self._base_vel = np.zeros(2)   # base diff drive
 
     def add_callback(self, key: str, func: Callable):
         """Add additional functions to bind keyboard.
@@ -138,6 +147,8 @@ class Se3Keyboard(DeviceBase):
         if self.gripper_term:
             gripper_value = -1.0 if self._close_gripper else 1.0
             command = np.append(command, gripper_value)
+        if self.base_term:
+            command = np.concatenate([command, self._base_vel])
 
         return torch.tensor(command, dtype=torch.float32, device=self._sim_device)
 
@@ -153,20 +164,24 @@ class Se3Keyboard(DeviceBase):
         """
         # apply the command when pressed
         if event.type == carb.input.KeyboardEventType.KEY_PRESS:
-            if event.input.name == "L":
+            if event.input.name == "L_SHIFT": # Used to be L but L is for wheel
                 self.reset()
-            if event.input.name == "K":
+            if event.input.name == "M":
                 self._close_gripper = not self._close_gripper
             elif event.input.name in ["W", "S", "A", "D", "Q", "E"]:
                 self._delta_pos += self._INPUT_KEY_MAPPING[event.input.name]
             elif event.input.name in ["Z", "X", "T", "G", "C", "V"]:
                 self._delta_rot += self._INPUT_KEY_MAPPING[event.input.name]
+            if self.base_term and event.input.name in ["I", "K", "J", "L"]:
+                self._base_vel += self._INPUT_KEY_MAPPING[event.input.name]
         # remove the command when un-pressed
         if event.type == carb.input.KeyboardEventType.KEY_RELEASE:
             if event.input.name in ["W", "S", "A", "D", "Q", "E"]:
                 self._delta_pos -= self._INPUT_KEY_MAPPING[event.input.name]
             elif event.input.name in ["Z", "X", "T", "G", "C", "V"]:
                 self._delta_rot -= self._INPUT_KEY_MAPPING[event.input.name]
+            if self.base_term and event.input.name in ["I", "K", "J", "L"]:
+                self._base_vel -= self._INPUT_KEY_MAPPING[event.input.name]
         # additional callbacks
         if event.type == carb.input.KeyboardEventType.KEY_PRESS:
             if event.input.name in self._additional_callbacks:
@@ -179,7 +194,7 @@ class Se3Keyboard(DeviceBase):
         """Creates default key binding."""
         self._INPUT_KEY_MAPPING = {
             # toggle: gripper command
-            "K": True,
+            "M": True,
             # x-axis (forward)
             "W": np.asarray([1.0, 0.0, 0.0]) * self.pos_sensitivity,
             "S": np.asarray([-1.0, 0.0, 0.0]) * self.pos_sensitivity,
@@ -198,6 +213,11 @@ class Se3Keyboard(DeviceBase):
             # yaw (around z-axis)
             "C": np.asarray([0.0, 0.0, 1.0]) * self.rot_sensitivity,
             "V": np.asarray([0.0, 0.0, -1.0]) * self.rot_sensitivity,
+            # base diff drive (left, right speeds)
+            "I": np.asarray([1.0, 1.0]) * self.base_sensitivity,
+            "K": np.asarray([-1.0, -1.0]) * self.base_sensitivity,
+            "J": np.asarray([-1.0, 1.0]) * self.base_sensitivity,
+            "L": np.asarray([1.0, -1.0]) * self.base_sensitivity,
         }
 
 
@@ -206,6 +226,8 @@ class Se3KeyboardCfg(DeviceCfg):
     """Configuration for SE3 keyboard devices."""
 
     gripper_term: bool = True
+    base_term: bool = False
+    base_sensitivity: float = 1.0
     pos_sensitivity: float = 0.4
     rot_sensitivity: float = 0.8
     retargeters: None = None

@@ -260,7 +260,7 @@ def create_environment(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg) -> gym.En
         exit(1)
 
 
-def setup_teleop_device(callbacks: dict[str, Callable]) -> object:
+def setup_teleop_device(env, callbacks: dict[str, Callable]) -> object:
     """Set up the teleoperation device based on configuration.
 
     Attempts to create a teleoperation device based on the environment configuration.
@@ -286,7 +286,8 @@ def setup_teleop_device(callbacks: dict[str, Callable]) -> object:
             )
             # Create fallback teleop device
             if args_cli.teleop_device.lower() == "keyboard":
-                teleop_interface = Se3Keyboard(Se3KeyboardCfg(pos_sensitivity=0.2, rot_sensitivity=0.5))
+                base_term = len(env.action_space.shape) > 0 and env.action_space.shape[-1] >= 9
+                teleop_interface = Se3Keyboard(Se3KeyboardCfg(pos_sensitivity=0.2, rot_sensitivity=0.5, base_term=base_term, base_sensitivity=2.0))
             elif args_cli.teleop_device.lower() == "spacemouse":
                 teleop_interface = Se3SpaceMouse(Se3SpaceMouseCfg(pos_sensitivity=0.2, rot_sensitivity=0.5))
             else:
@@ -443,7 +444,7 @@ def run_simulation_loop(
         "RESET": reset_recording_instance,
     }
 
-    teleop_interface = setup_teleop_device(teleoperation_callbacks)
+    teleop_interface = setup_teleop_device(env, teleoperation_callbacks)
     teleop_interface.add_callback("R", reset_recording_instance)
 
     # Reset before starting

@@ -204,13 +204,25 @@ class DifferentialInverseKinematicsAction(ActionTerm):
     def apply_actions(self):
         # obtain quantities from simulation
         ee_pos_curr, ee_quat_curr = self._compute_frame_pose()
-        joint_pos = self._asset.data.joint_pos[:, self._joint_ids]
+        # Base the IK delta on the current target rather than the sagged current position
+        # to strictly prevent steady-state downward drifting from gravity pulling the targets inward.
+        joint_pos = self._asset.data.joint_pos_target[:, self._joint_ids]
         # compute the delta in joint-space
         if ee_quat_curr.norm() != 0:
             jacobian = self._compute_frame_jacobian()
             joint_pos_des = self._ik_controller.compute(ee_pos_curr, ee_quat_curr, jacobian, joint_pos)
         else:
             joint_pos_des = joint_pos.clone()
+        # Keep IK targets within articulation soft joint limits to avoid runaway extension.
+        joint_limits = self._asset.data.soft_joint_pos_limits[:, self._joint_ids]
+        joint_pos_des = torch.clamp(joint_pos_des, min=joint_limits[..., 0], max=joint_limits[..., 1])
+        
+        # Enforce mimic constraint on Stretch redundant arm joints (if present) to prevent null-space sliding
+        arm_idxs = [i for i, name in enumerate(self._joint_names) if name.startswith("joint_arm_l") and name[-1].isdigit()]
+        if len(arm_idxs) > 1:
+            avg_arm_pos = joint_pos_des[:, arm_idxs].mean(dim=1, keepdim=True)
+            joint_pos_des[:, arm_idxs] = avg_arm_pos
+
         # set the joint position command
         self._asset.set_joint_position_target(joint_pos_des, self._joint_ids)
 
